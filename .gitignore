@@ -5,3 +5,4 @@ __pycache__/
 chroma_db/
 .deepeval-cache/
 .deepeval/
+rag_runs/

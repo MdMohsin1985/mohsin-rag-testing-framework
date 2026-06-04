@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import os
 import sys
+import argparse
+import json
 from pathlib import Path
 
 
@@ -18,7 +20,7 @@ from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric
 from deepeval.test_case import LLMTestCase
 from dotenv import load_dotenv
 
-from rag_app import answer_question
+from rag_app import LATEST_RUN_PATH, answer_question, save_rag_run
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -33,9 +35,8 @@ def require_api_key() -> None:
         )
 
 
-def build_test_case(question: str) -> LLMTestCase:
-    """Run the RAG pipeline once and convert the result into a DeepEval test case."""
-    answer, context_chunks = answer_question(question)
+def build_test_case(question: str, answer: str, context_chunks: list[str]) -> LLMTestCase:
+    """Convert one RAG result into a DeepEval test case."""
     return LLMTestCase(
         input=question,
         actual_output=answer,
@@ -43,11 +44,66 @@ def build_test_case(question: str) -> LLMTestCase:
     )
 
 
-def run_evaluation() -> None:
-    """Run Faithfulness and Answer Relevancy metrics against a sample question."""
+def build_fresh_test_case(question: str, top_k: int) -> tuple[LLMTestCase, str, str, Path]:
+    """Run the RAG pipeline now and evaluate that newly generated answer."""
+    answer, context_chunks = answer_question(question=question, top_k=top_k)
+    run_path = save_rag_run(
+        question=question,
+        answer=answer,
+        context_chunks=context_chunks,
+    )
+    return (
+        build_test_case(
+            question=question,
+            answer=answer,
+            context_chunks=context_chunks,
+        ),
+        question,
+        answer,
+        run_path,
+    )
+
+
+def build_saved_test_case(run_path: Path = LATEST_RUN_PATH) -> tuple[LLMTestCase, str, str]:
+    """Load the latest saved RAG answer and evaluate that exact prior run."""
+    if not run_path.exists():
+        raise RuntimeError(
+            "No saved RAG run found. Run `python src/rag_app.py --question \"...\"` first "
+            "or pass `--question` to evaluate a fresh answer."
+        )
+
+    run = json.loads(run_path.read_text(encoding="utf-8"))
+    question = run["question"]
+    answer = run["answer"]
+    return (
+        build_test_case(
+            question=question,
+            answer=answer,
+            context_chunks=run["retrieval_context"],
+        ),
+        question,
+        answer,
+    )
+
+
+def run_evaluation(question: str | None = None, top_k: int = 4) -> None:
+    """Run Faithfulness and Answer Relevancy on a fresh or saved RAG answer."""
     require_api_key()
-    question = "What does the AI RAG Testing Framework evaluate?"
-    test_case = build_test_case(question)
+    if question:
+        print("Evaluation mode: fresh RAG answer")
+        test_case, evaluated_question, answer, run_path = build_fresh_test_case(
+            question=question,
+            top_k=top_k,
+        )
+        print(f"Saved run: {run_path}")
+        print(f"Latest run: {LATEST_RUN_PATH}")
+    else:
+        print(f"Evaluating saved answer from: {LATEST_RUN_PATH}")
+        test_case, evaluated_question, answer = build_saved_test_case()
+
+    print(f"\nQuestion: {evaluated_question}")
+    print("\nAnswer:")
+    print(f"{answer}\n")
 
     # DeepEval will use an LLM judge to score groundedness and relevance.
     metrics = [
@@ -59,6 +115,16 @@ def run_evaluation() -> None:
 
 if __name__ == "__main__":
     try:
-        run_evaluation()
+        parser = argparse.ArgumentParser(
+            description="Evaluate a fresh RAG answer or the latest saved RAG run."
+        )
+        parser.add_argument(
+            "--question",
+            "-q",
+            help="Question to evaluate with a fresh RAG run. If omitted, uses rag_runs/latest_run.json.",
+        )
+        parser.add_argument("--top-k", type=int, default=4, help="Number of chunks to retrieve for fresh evaluation.")
+        args = parser.parse_args()
+        run_evaluation(question=args.question, top_k=args.top_k)
     except RuntimeError as exc:
         raise SystemExit(f"Error: {exc}") from exc

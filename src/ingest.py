@@ -1,4 +1,4 @@
-"""Ingest text documents into a persistent ChromaDB collection."""
+"""Ingest TXT, PDF, and Excel documents into a persistent ChromaDB collection."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from typing import Iterable
 import chromadb
 from chromadb.utils.embedding_functions import OpenAIEmbeddingFunction
 from dotenv import load_dotenv
+from openpyxl import load_workbook
+from pypdf import PdfReader
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -17,6 +19,7 @@ DOCUMENTS_DIR = ROOT_DIR / "documents"
 CHROMA_DIR = ROOT_DIR / "chroma_db"
 COLLECTION_NAME = "rag_documents"
 EMBEDDING_MODEL = "text-embedding-3-small"
+SUPPORTED_EXTENSIONS = {".txt", ".pdf", ".xlsx", ".xlsm", ".xltx", ".xltm"}
 
 
 def require_api_key() -> str:
@@ -30,11 +33,64 @@ def require_api_key() -> str:
     return api_key
 
 
-def read_text_files(documents_dir: Path = DOCUMENTS_DIR) -> Iterable[tuple[Path, str]]:
-    """Yield every non-empty .txt document in the documents folder."""
+def read_txt(path: Path) -> str:
+    """Read a plain text document."""
+    return path.read_text(encoding="utf-8").strip()
+
+
+def read_pdf(path: Path) -> str:
+    """Extract text from every page of a PDF document."""
+    reader = PdfReader(str(path))
+    pages: list[str] = []
+    for page_number, page in enumerate(reader.pages, start=1):
+        text = page.extract_text() or ""
+        if text.strip():
+            pages.append(f"Page {page_number}:\n{text.strip()}")
+    return "\n\n".join(pages).strip()
+
+
+def read_excel(path: Path) -> str:
+    """Extract visible cell values from each sheet in an Excel workbook."""
+    workbook = load_workbook(filename=path, read_only=True, data_only=True)
+    sections: list[str] = []
+
+    for sheet in workbook.worksheets:
+        rows: list[str] = []
+        for row in sheet.iter_rows(values_only=True):
+            values = [str(value).strip() for value in row if value is not None]
+            if values:
+                rows.append(" | ".join(values))
+
+        if rows:
+            sections.append(f"Sheet: {sheet.title}\n" + "\n".join(rows))
+
+    workbook.close()
+    return "\n\n".join(sections).strip()
+
+
+def read_document(path: Path) -> str:
+    """Route supported document types to the right text extractor."""
+    suffix = path.suffix.lower()
+    if suffix == ".txt":
+        return read_txt(path)
+    if suffix == ".pdf":
+        return read_pdf(path)
+    if suffix in {".xlsx", ".xlsm", ".xltx", ".xltm"}:
+        return read_excel(path)
+    raise ValueError(f"Unsupported file type: {path.suffix}")
+
+
+def read_documents(documents_dir: Path = DOCUMENTS_DIR) -> Iterable[tuple[Path, str]]:
+    """Yield every non-empty supported document in the documents folder."""
     documents_dir.mkdir(parents=True, exist_ok=True)
-    for path in sorted(documents_dir.glob("*.txt")):
-        text = path.read_text(encoding="utf-8").strip()
+    for path in sorted(documents_dir.iterdir()):
+        if not path.is_file() or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+            continue
+        try:
+            text = read_document(path)
+        except Exception as exc:
+            print(f"Skipping {path.name}: {exc}")
+            continue
         if text:
             yield path, text
 
@@ -77,20 +133,27 @@ def build_chunk_id(path: Path, index: int, chunk: str) -> str:
 
 
 def ingest_documents() -> int:
-    """Read TXT files, split them, and upsert the chunks into ChromaDB."""
+    """Read supported documents, split them, and upsert chunks into ChromaDB."""
     collection = get_collection()
     ids: list[str] = []
     chunks: list[str] = []
     metadatas: list[dict[str, str | int]] = []
 
-    for path, text in read_text_files():
+    for path, text in read_documents():
         for index, chunk in enumerate(chunk_text(text)):
             ids.append(build_chunk_id(path, index, chunk))
             chunks.append(chunk)
-            metadatas.append({"source": path.name, "chunk_index": index})
+            metadatas.append(
+                {
+                    "source": path.name,
+                    "file_type": path.suffix.lower(),
+                    "chunk_index": index,
+                }
+            )
 
     if not chunks:
-        print(f"No .txt documents found in {DOCUMENTS_DIR}")
+        extensions = ", ".join(sorted(SUPPORTED_EXTENSIONS))
+        print(f"No supported documents found in {DOCUMENTS_DIR}. Supported: {extensions}")
         return 0
 
     collection.upsert(ids=ids, documents=chunks, metadatas=metadatas)

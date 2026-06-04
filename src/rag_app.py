@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
+from datetime import UTC, datetime
 from pathlib import Path
 
 import chromadb
@@ -14,6 +16,8 @@ from openai import OpenAI
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CHROMA_DIR = ROOT_DIR / "chroma_db"
+RUNS_DIR = ROOT_DIR / "rag_runs"
+LATEST_RUN_PATH = RUNS_DIR / "latest_run.json"
 COLLECTION_NAME = "rag_documents"
 EMBEDDING_MODEL = "text-embedding-3-small"
 CHAT_MODEL = "gpt-4o-mini"
@@ -92,6 +96,27 @@ def answer_question(question: str, top_k: int = 4) -> tuple[str, list[str]]:
     return answer, context_chunks
 
 
+def save_rag_run(question: str, answer: str, context_chunks: list[str]) -> Path:
+    """Save the exact question, answer, and retrieved context for evaluation."""
+    RUNS_DIR.mkdir(parents=True, exist_ok=True)
+    created_at = datetime.now(UTC).replace(microsecond=0).isoformat()
+    run = {
+        "created_at": created_at,
+        "question": question,
+        "answer": answer,
+        "retrieval_context": context_chunks,
+        "chat_model": CHAT_MODEL,
+        "embedding_model": EMBEDDING_MODEL,
+    }
+
+    timestamp = created_at.replace(":", "-")
+    run_path = RUNS_DIR / f"rag_run_{timestamp}.json"
+    json_text = json.dumps(run, indent=2, ensure_ascii=False)
+    run_path.write_text(json_text, encoding="utf-8")
+    LATEST_RUN_PATH.write_text(json_text, encoding="utf-8")
+    return run_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Ask a question against your TXT documents.")
     parser.add_argument("--question", "-q", help="Question to ask. If omitted, prompts interactively.")
@@ -103,12 +128,19 @@ def main() -> None:
         raise SystemExit("Question cannot be empty.")
 
     answer, context_chunks = answer_question(question=question, top_k=args.top_k)
+    run_path = save_rag_run(
+        question=question,
+        answer=answer,
+        context_chunks=context_chunks,
+    )
     print("\nAnswer:")
     print(answer)
     print("\nRetrieved sources:")
     for index, chunk in enumerate(context_chunks, start=1):
         preview = chunk.replace("\n", " ")[:120]
         print(f"{index}. {preview}...")
+    print(f"\nSaved run: {run_path}")
+    print(f"Latest run: {LATEST_RUN_PATH}")
 
 
 if __name__ == "__main__":
