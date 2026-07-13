@@ -1,0 +1,42 @@
+[
+  {
+    "question": "What is the company's annual revenue for 2024?",
+    "reason_unanswerable": "The sample RAG document does not mention company revenue."
+  },
+  {
+    "question": "Who is the CEO of the AI RAG Testing Framework?",
+    "reason_unanswerable": "The sample RAG document does not name any CEO."
+  },
+  {
+    "question": "What is the customer support phone number for this framework?",
+    "reason_unanswerable": "The sample RAG document does not provide support contact details."
+  },
+  {
+    "question": "Which cloud provider hosts the ChromaDB database?",
+    "reason_unanswerable": "The sample RAG document says ChromaDB is used but does not mention hosting."
+  },
+  {
+    "question": "What is the monthly subscription price for the AI RAG Testing Framework?",
+    "reason_unanswerable": "The sample RAG document does not discuss pricing."
+  },
+  {
+    "question": "How many users signed up for the framework last month?",
+    "reason_unanswerable": "The sample RAG document does not contain usage analytics."
+  },
+  {
+    "question": "What programming language was used to build the frontend UI?",
+    "reason_unanswerable": "The sample RAG document does not describe a frontend UI."
+  },
+  {
+    "question": "Which authentication provider does the framework use?",
+    "reason_unanswerable": "The sample RAG document does not mention authentication."
+  },
+  {
+    "question": "What is the maximum file upload size supported by the framework?",
+    "reason_unanswerable": "The sample RAG document does not mention upload size limits."
+  },
+  {
+    "question": "Which database backup schedule is configured for production?",
+    "reason_unanswerable": "The sample RAG document does not describe production backup schedules."
+  }
+]

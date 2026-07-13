@@ -9,12 +9,20 @@ DeepEval.
 ```text
 documents/
   sample.txt
+datasets/
+  evaluation_dataset.json
+  hallucination_tests.json
 src/
   ingest.py
   rag_app.py
   evaluate.py
+  dataset_runner.py
+  hallucination_test.py
 rag_runs/
   latest_run.json
+reports/
+  evaluation_report.csv
+  hallucination_report.csv
 requirements.txt
 .env.example
 README.md
@@ -66,6 +74,9 @@ Supported file types:
 
 This creates a persistent ChromaDB database in `chroma_db/`.
 
+Only files in `documents/` are ingested. Files in `datasets/` are test data and
+should not be ingested into ChromaDB.
+
 ## Run the RAG App
 
 Ask a question from the command line:
@@ -103,3 +114,26 @@ The evaluation uses:
 
 These metrics use OpenAI through DeepEval, so `.env` must contain a valid
 `OPENAI_API_KEY`.
+
+## Run Dataset Evaluation
+
+Run all question and expected-answer pairs from `datasets/evaluation_dataset.json`:
+
+```bash
+python src/dataset_runner.py
+```
+
+This creates `reports/evaluation_report.csv`.
+
+## Run Hallucination Testing
+
+Run unanswerable questions from `datasets/hallucination_tests.json`:
+
+```bash
+python src/hallucination_test.py
+```
+
+The hallucination dataset is not a source document. It should stay in
+`datasets/` so the RAG system cannot retrieve the test questions as context.
+The script flags hallucinated responses when DeepEval faithfulness fails and
+saves results to `reports/hallucination_report.csv`.
