@@ -1,0 +1,46 @@
+[
+  {
+    "question": "What does RAG stand for?",
+    "expected_answer": "RAG stands for retrieval augmented generation."
+  },
+  {
+    "question": "What is retrieval augmented generation used for?",
+    "expected_answer": "Retrieval augmented generation is used for answering questions with help from external documents."
+  },
+  {
+    "question": "What does a RAG system retrieve first?",
+    "expected_answer": "A RAG system first retrieves relevant passages from a knowledge base."
+  },
+  {
+    "question": "After retrieving relevant passages, what does the system ask the language model to do?",
+    "expected_answer": "It asks the language model to answer using the retrieved passages as context."
+  },
+  {
+    "question": "What project does the sample document belong to?",
+    "expected_answer": "The sample document belongs to the AI RAG Testing Framework."
+  },
+  {
+    "question": "Where are documents loaded from in this project?",
+    "expected_answer": "Documents are loaded from the documents folder."
+  },
+  {
+    "question": "What happens to documents after they are loaded?",
+    "expected_answer": "Documents are split into chunks, stored in ChromaDB, retrieved by semantic similarity, and passed to OpenAI for answer generation."
+  },
+  {
+    "question": "How are chunks retrieved from ChromaDB?",
+    "expected_answer": "Chunks are retrieved by semantic similarity."
+  },
+  {
+    "question": "Why does evaluation help in the RAG framework?",
+    "expected_answer": "Evaluation helps verify that the generated answer is useful and grounded in the retrieved context."
+  },
+  {
+    "question": "What does faithfulness check?",
+    "expected_answer": "Faithfulness checks whether the answer is supported by the context."
+  },
+  {
+    "question": "What does answer relevancy check?",
+    "expected_answer": "Answer relevancy checks whether the answer directly addresses the user question."
+  }
+]

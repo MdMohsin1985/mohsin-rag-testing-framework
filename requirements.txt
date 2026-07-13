@@ -1,4 +1,6 @@
 chromadb>=0.5.23
 deepeval>=2.0.0
 openai>=1.58.1
+openpyxl>=3.1.5
+pypdf>=5.1.0
 python-dotenv>=1.0.1

@@ -107,6 +107,8 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 120) -> list[str
         chunk = text[start:end].strip()
         if chunk:
             chunks.append(chunk)
+        if end >= len(text):
+            break
         start += chunk_size - overlap
     return chunks
 
@@ -138,8 +140,10 @@ def ingest_documents() -> int:
     ids: list[str] = []
     chunks: list[str] = []
     metadatas: list[dict[str, str | int]] = []
+    sources: set[str] = set()
 
     for path, text in read_documents():
+        sources.add(path.name)
         for index, chunk in enumerate(chunk_text(text)):
             ids.append(build_chunk_id(path, index, chunk))
             chunks.append(chunk)
@@ -155,6 +159,19 @@ def ingest_documents() -> int:
         extensions = ", ".join(sorted(SUPPORTED_EXTENSIONS))
         print(f"No supported documents found in {DOCUMENTS_DIR}. Supported: {extensions}")
         return 0
+
+    existing = collection.get(include=["metadatas"])
+    existing_sources = {
+        metadata["source"]
+        for metadata in existing.get("metadatas", [])
+        if metadata and metadata.get("source")
+    }
+    for stale_source in existing_sources - sources:
+        collection.delete(where={"source": stale_source})
+
+    # Replace chunks for each current source so changed files cannot leave stale chunks behind.
+    for source in sources:
+        collection.delete(where={"source": source})
 
     collection.upsert(ids=ids, documents=chunks, metadatas=metadatas)
     print(f"Ingested {len(chunks)} chunks from {len(set(m['source'] for m in metadatas))} files.")
