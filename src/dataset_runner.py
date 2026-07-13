@@ -10,7 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from deepeval.metrics import AnswerRelevancyMetric, FaithfulnessMetric, GEval
+from deepeval.metrics import FaithfulnessMetric, GEval
 from deepeval.test_case import LLMTestCase, SingleTurnParams
 
 from evaluate import require_api_key
@@ -44,9 +44,9 @@ class EvaluationResult:
     faithfulness_score: float | None
     faithfulness_success: bool | None
     faithfulness_reason: str
-    answer_relevancy_score: float | None
-    answer_relevancy_success: bool | None
-    answer_relevancy_reason: str
+    answer_relevance_score: float | None
+    answer_relevance_success: bool | None
+    answer_relevance_reason: str
     correctness_score: float | None
     correctness_success: bool | None
     correctness_reason: str
@@ -93,11 +93,24 @@ def build_dataset_test_case(
     )
 
 
-def build_metrics() -> tuple[FaithfulnessMetric, AnswerRelevancyMetric, GEval]:
+def build_metrics() -> tuple[FaithfulnessMetric, GEval, GEval]:
     """Create RAG quality metrics plus expected-answer correctness."""
     return (
         FaithfulnessMetric(threshold=0.7),
-        AnswerRelevancyMetric(threshold=0.7),
+        GEval(
+            name="Answer Relevance",
+            threshold=0.7,
+            evaluation_params=[
+                SingleTurnParams.INPUT,
+                SingleTurnParams.ACTUAL_OUTPUT,
+            ],
+            criteria=(
+                "Determine whether the actual output directly and completely "
+                "answers the input question. Ignore minor wording differences. "
+                "Penalize answers that are off-topic, evasive, or include "
+                "irrelevant information."
+            ),
+        ),
         GEval(
             name="Correctness",
             threshold=0.7,
@@ -175,9 +188,9 @@ def evaluate_case(
         context_chunks=context_chunks,
     )
 
-    faithfulness_metric, answer_relevancy_metric, correctness_metric = build_metrics()
+    faithfulness_metric, answer_relevance_metric, correctness_metric = build_metrics()
     faithfulness_metric.measure(test_case)
-    answer_relevancy_metric.measure(test_case)
+    answer_relevance_metric.measure(test_case)
     correctness_metric.measure(test_case)
 
     return EvaluationResult(
@@ -189,9 +202,9 @@ def evaluate_case(
         faithfulness_score=read_metric_value(faithfulness_metric, "score"),
         faithfulness_success=read_metric_value(faithfulness_metric, "success"),
         faithfulness_reason=read_metric_value(faithfulness_metric, "reason") or "",
-        answer_relevancy_score=read_metric_value(answer_relevancy_metric, "score"),
-        answer_relevancy_success=read_metric_value(answer_relevancy_metric, "success"),
-        answer_relevancy_reason=read_metric_value(answer_relevancy_metric, "reason") or "",
+        answer_relevance_score=read_metric_value(answer_relevance_metric, "score"),
+        answer_relevance_success=read_metric_value(answer_relevance_metric, "success"),
+        answer_relevance_reason=read_metric_value(answer_relevance_metric, "reason") or "",
         correctness_score=read_metric_value(correctness_metric, "score"),
         correctness_success=read_metric_value(correctness_metric, "success"),
         correctness_reason=read_metric_value(correctness_metric, "reason") or "",
@@ -234,9 +247,9 @@ def save_report(results: list[EvaluationResult], report_path: Path = REPORT_PATH
         "faithfulness_score",
         "faithfulness_success",
         "faithfulness_reason",
-        "answer_relevancy_score",
-        "answer_relevancy_success",
-        "answer_relevancy_reason",
+        "answer_relevance_score",
+        "answer_relevance_success",
+        "answer_relevance_reason",
         "correctness_score",
         "correctness_success",
         "correctness_reason",
@@ -257,9 +270,9 @@ def save_report(results: list[EvaluationResult], report_path: Path = REPORT_PATH
                     "faithfulness_score": result.faithfulness_score,
                     "faithfulness_success": result.faithfulness_success,
                     "faithfulness_reason": result.faithfulness_reason,
-                    "answer_relevancy_score": result.answer_relevancy_score,
-                    "answer_relevancy_success": result.answer_relevancy_success,
-                    "answer_relevancy_reason": result.answer_relevancy_reason,
+                    "answer_relevance_score": result.answer_relevance_score,
+                    "answer_relevance_success": result.answer_relevance_success,
+                    "answer_relevance_reason": result.answer_relevance_reason,
                     "correctness_score": result.correctness_score,
                     "correctness_success": result.correctness_success,
                     "correctness_reason": result.correctness_reason,
