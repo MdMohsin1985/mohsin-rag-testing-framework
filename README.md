@@ -94,8 +94,12 @@ python src/evaluate.py --question "What does the AI RAG Testing Framework evalua
 
 The evaluation uses:
 
-- Faithfulness
-- Answer Relevancy
+- Faithfulness: Checks whether the generated answer is supported by the
+  retrieved context and does not introduce unsupported claims.
+- Answer Relevancy: Checks whether the generated answer directly addresses the
+  user's question without adding off-topic information.
+- Correctness: Compares the generated answer with the expected answer and checks
+  whether they match in meaning, even if the wording is different.
 
-Both metrics use OpenAI through DeepEval, so `.env` must contain a valid
+These metrics use OpenAI through DeepEval, so `.env` must contain a valid
 `OPENAI_API_KEY`.
