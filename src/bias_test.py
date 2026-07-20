@@ -21,7 +21,10 @@ from rag_app import answer_question
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 
-DATASET_PATH = ROOT_DIR / "datasets" / "bias_tests.json"
+DATASET_PATHS = [
+    ROOT_DIR / "datasets" / "bias_grounded_tests.json",
+    ROOT_DIR / "datasets" / "bias_unsupported_tests.json",
+]
 
 REPORTS_DIR = ROOT_DIR / "reports"
 
@@ -60,7 +63,85 @@ class BiasResult:
     fairness_reason: str
 
     evaluated_at: str
+    
+def initialize_report(report_path: Path | None = None) -> None:
+    """Create the CSV report with headers if it does not already exist."""
+    if report_path is None:
+        report_path = REPORT_PATH
 
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    if report_path.exists():
+        report_path.unlink()
+
+    fieldnames = [
+        "case_number",
+        "category",
+        "question",
+        "expected_behavior",
+        "actual_answer",
+        "fairness_score",
+        "fairness_success",
+        "fairness_reason",
+        "retrieval_context",
+        "evaluated_at",
+    ]
+
+    with report_path.open(
+        "w",
+        newline="",
+        encoding="utf-8",
+    ) as csv_file:
+
+        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+        writer.writeheader()
+
+def append_result(
+    result: BiasResult,
+    report_path: Path | None = None,
+) -> None:
+    """Append one completed result to the CSV."""
+    if report_path is None:
+        report_path = REPORT_PATH
+    with report_path.open(
+        "a",
+        newline="",
+        encoding="utf-8",
+    ) as csv_file:
+
+        writer = csv.DictWriter(
+            csv_file,
+            fieldnames=[
+                "case_number",
+                "category",
+                "question",
+                "expected_behavior",
+                "actual_answer",
+                "fairness_score",
+                "fairness_success",
+                "fairness_reason",
+                "retrieval_context",
+                "evaluated_at",
+            ],
+        )
+
+        writer.writerow(
+            {
+                "case_number": result.case_number,
+                "category": result.category,
+                "question": result.question,
+                "expected_behavior": result.expected_behavior,
+                "actual_answer": result.actual_answer,
+                "fairness_score": result.fairness_score,
+                "fairness_success": result.fairness_success,
+                "fairness_reason": result.fairness_reason,
+                "retrieval_context": json.dumps(
+                    result.retrieval_context,
+                    ensure_ascii=False,
+                ),
+                "evaluated_at": result.evaluated_at,
+            }
+        )
 
 def load_bias_cases(
     dataset_path: Path = DATASET_PATH,
@@ -131,6 +212,7 @@ def evaluate_bias_case(
     case_number: int,
     test_case: BiasCase,
     top_k: int,
+    metric: GEval,
 ) -> BiasResult:
 
     answer, context_chunks = answer_question(
@@ -143,8 +225,6 @@ def evaluate_bias_case(
         actual_output=answer,
         retrieval_context=context_chunks,
     )
-
-    metric = build_metric()
 
     metric.measure(deepeval_case)
 
@@ -173,7 +253,10 @@ def run_bias_tests(
 
     test_cases = load_bias_cases(dataset_path)
 
-    results = []
+    results: list[BiasResult] = []
+
+    initialize_report()
+    metric = build_metric()
 
     for case_number, test_case in enumerate(
         test_cases,
@@ -186,74 +269,20 @@ def run_bias_tests(
             f"{test_case.question}"
         )
 
-    results.append(
-    evaluate_bias_case(
-        case_number=case_number,
-        test_case=test_case,
-        top_k=top_k,
-    )
-)
-    return results
-
-
-def save_report(
-    results: list[BiasResult],
-    report_path: Path = REPORT_PATH,
-) -> Path:
-
-    report_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
-    fieldnames = [
-        "case_number",
-        "category",
-        "question",
-        "expected_behavior",
-        "actual_answer",
-        "fairness_score",
-        "fairness_success",
-        "fairness_reason",
-        "retrieval_context",
-        "evaluated_at",
-    ]
-
-    with report_path.open(
-        "w",
-        newline="",
-        encoding="utf-8",
-    ) as csv_file:
-
-        writer = csv.DictWriter(
-            csv_file,
-            fieldnames=fieldnames,
+        result = evaluate_bias_case(
+            case_number=case_number,
+            test_case=test_case,
+            top_k=top_k,
+            metric=metric,
         )
 
-        writer.writeheader()
+        results.append(result)
 
-        for result in results:
+        append_result(result)
 
-            writer.writerow(
-                {
-                    "case_number": result.case_number,
-                    "category": result.category,
-                    "question": result.question,
-                    "expected_behavior": result.expected_behavior,
-                    "actual_answer": result.actual_answer,
-                    "fairness_score": result.fairness_score,
-                    "fairness_success": result.fairness_success,
-                    "fairness_reason": result.fairness_reason,
-                    "retrieval_context": json.dumps(
-                        result.retrieval_context,
-                        ensure_ascii=False,
-                    ),
-                    "evaluated_at": result.evaluated_at,
-                }
-            )
+        print(f"✓ Saved case {case_number}")
 
-    return report_path
-
+    return results
 
 def main():
 
@@ -286,11 +315,7 @@ def main():
         top_k=args.top_k,
     )
 
-    report_path = save_report(
-        results=results,
-        report_path=args.report,
-    )
-
+    report_path = args.report
     passed = sum(
         1
         for r in results
