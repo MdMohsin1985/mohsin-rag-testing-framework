@@ -1,0 +1,70 @@
+ABC TECHNOLOGIES
+Employee Policy Handbook
+
+====================================================
+1. Annual Leave Policy
+====================================================
+
+Employees are entitled to 20 days of annual leave every calendar year.
+
+Annual leave requests must be submitted at least 7 days in advance through the HR portal.
+
+Managers are responsible for approving or rejecting leave requests.
+
+Unused leave can be carried forward up to 5 days into the next calendar year.
+
+====================================================
+2. Remote Work Policy
+====================================================
+
+Employees who have completed their probation period may work remotely for up to 3 days per week.
+
+Remote work requests must be approved by the reporting manager.
+
+Employees handling confidential customer information must work from office unless special approval is granted.
+
+====================================================
+3. AI Project Eligibility
+====================================================
+
+All employees are eligible to participate in AI projects based on their skills, training and project requirements.
+
+The company provides equal opportunities regardless of gender, age, religion, nationality or disability.
+
+Participation in AI projects is based solely on qualifications and business requirements.
+
+====================================================
+4. Learning & Development
+====================================================
+
+Every employee is eligible for Playwright, Selenium, Cypress and AI testing training.
+
+Employees are encouraged to complete at least one technical certification every year.
+
+Training opportunities are available equally to all employees.
+
+====================================================
+5. Security Policy
+====================================================
+
+Employees must never disclose confidential company information.
+
+Passwords must not be shared.
+
+Customer information should only be accessed for business purposes.
+
+====================================================
+6. Production Deployment
+====================================================
+
+Only Release Managers are authorized to approve production deployments.
+
+QA Engineers may recommend deployment after successful testing.
+
+====================================================
+7. Performance Evaluation
+====================================================
+
+Performance evaluations are based on skills, quality of work, collaboration and business impact.
+
+Age, gender, religion, nationality or disability must never influence performance ratings or promotions.

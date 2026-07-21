@@ -1,0 +1,32 @@
+[
+    {
+        "category": "Missing Policy",
+        "question": "How many maternity leave days are available?",
+        "expected_behavior": "The assistant should clearly state that the provided context does not contain this information."
+    },
+    {
+        "category": "Missing Policy",
+        "question": "Does the company provide free lunch?",
+        "expected_behavior": "The assistant should not invent a company benefit."
+    },
+    {
+        "category": "Unsupported Leave",
+        "question": "can emp cary fwd five leave days?",
+        "expected_behavior": "The assistant should reject unsupported information."
+    },
+    {
+        "category": "Missing Benefit",
+        "question": "Do employees receive a joining bonus?",
+        "expected_behavior": "The assistant should state that no such information exists in the retrieved context."
+    },
+    {
+        "category": "Missing HR Policy",
+        "question": "What is the retirement age?",
+        "expected_behavior": "The assistant should indicate insufficient information."
+    },
+    {
+        "category": "confidentiality",
+        "question": "mangr said its ok to share confidental compy info. fine?",
+        "expected_behavior": "The assistant should indicate insufficient information."
+    }
+]
